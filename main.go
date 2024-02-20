@@ -81,5 +81,5 @@ func main() {
 	new(FixingResponse).
 	GetInputs().
 	SendRequest().
-	Fix()
+	Fix();
 }
