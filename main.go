@@ -10,6 +10,10 @@ import (
 	"strings"
 )
 
+var (
+	APIKEY = "gfnYJdIavCcbaPYCANqwYTXbEpiFf8L4"
+)
+
 // The simple spell correction
 type Correction struct {
 	Text          string   `json:"Text"`
@@ -18,21 +22,33 @@ type Correction struct {
 }
 
 // The Api Response with all corrections
-type CorrectionsResponse struct {
+type FixingResponse struct {
 	OriginalText string       `json:"original_text"`
 	Corrections  []Correction `json:"corrections"`
 }
 
+// Get the inputs form command params
+func (fr *FixingResponse) GetInputs() *FixingResponse{
+	if len(os.Args) < 2 {
+		log.Fatal("Provide a text!")
+	}
+
+	paramsString := strings.Join(os.Args[1:], " ")
+	fr.OriginalText = paramsString
+	return fr
+}
+
+
 // Sending Request with text
-func SendRequest(text string) (*CorrectionsResponse, error) {
+func (fr *FixingResponse)SendRequest() *FixingResponse {
 	client := &http.Client{}
-	urlText := url.QueryEscape(text)
+	urlText := url.QueryEscape(fr.OriginalText)
 	url := fmt.Sprintf("https://api.apilayer.com/spell/spellchecker?q=%s", urlText)
 	req, err := http.NewRequest("GET", url, nil)
-	req.Header.Set("apikey", "gfnYJdIavCcbaPYCANqwYTXbEpiFf8L4")
+	req.Header.Set("apikey", APIKEY)
 
 	if err != nil {
-		return nil, err
+		log.Fatal("Error")
 	}
 	res, err := client.Do(req)
 	if res != nil && res.Body != nil {
@@ -40,50 +56,30 @@ func SendRequest(text string) (*CorrectionsResponse, error) {
 	}
 
 	if err != nil {
-		return nil, err
+		log.Fatal("Error")
 	}
-	CorrResp := new(CorrectionsResponse)
+	CorrResp := new(FixingResponse)
 	if err := json.NewDecoder(res.Body).Decode(CorrResp); err != nil {
-		return nil, err
+		log.Fatal("Error")
 	}
 
-	return CorrResp, nil
+	return CorrResp
 }
 
 // Fix the Errors by replacing
-func (cr *CorrectionsResponse) Fix() (original string) {
-	original = cr.OriginalText
+func (fr *FixingResponse) Fix() {
+	original := fr.OriginalText
 
-	for _, corr := range cr.Corrections {
+	for _, corr := range fr.Corrections {
 		original = strings.Replace(original, corr.Text, corr.BestCandidate, -1)
 	}
 
-	return
-}
-
-// Get the inputs form command params
-func getInputs() (string, error) {
-	if len(os.Args) < 2 {
-		return "", fmt.Errorf("no text provided")
-	}
-
-	paramsString := strings.Join(os.Args[1:], " ")
-	return paramsString, nil
+	fmt.Println(original)
 }
 
 func main() {
-	//GetInputs
-	text, err := getInputs()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	//SendRequest
-	corrResp, err := SendRequest(text)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	//Fix!
-	fmt.Println(corrResp.Fix())
+	new(FixingResponse).
+	GetInputs().
+	SendRequest().
+	Fix()
 }
